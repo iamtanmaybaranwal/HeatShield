@@ -1,0 +1,31 @@
+// wifi_config.h.example
+// ----------------------
+// Copy this file to wifi_config.h (same folder) and fill in your real
+// values. wifi_config.h is gitignored on purpose -- it holds your WiFi
+// password, so it must never be committed.
+//
+//   cp wifi_config.h.example wifi_config.h        (macOS/Linux)
+//   copy wifi_config.h.example wifi_config.h       (Windows cmd)
+
+#ifndef HEATSHIELD_WIFI_CONFIG_H
+#define HEATSHIELD_WIFI_CONFIG_H
+
+#define HEATSHIELD_WIFI_SSID "YOUR_WIFI_SSID"
+#define HEATSHIELD_WIFI_PASSWORD "YOUR_WIFI_PASSWORD"
+
+// Full URL of the Node.js backend's ingest endpoint (see
+// ../../HeatShieldAI_Dashboard). The gateway and the machine running the
+// backend must be reachable from each other -- simplest setup is both on
+// the same WiFi network, with the backend's LAN IP here (find it with
+// `ipconfig` on Windows / `ifconfig` or `ip addr` on macOS/Linux -- look
+// for the IPv4 address of the WiFi adapter, e.g. 192.168.1.42).
+#define HEATSHIELD_BACKEND_URL "http://192.168.1.100:3000/api/ingest"
+
+// Optional: must match INGEST_API_KEY in the backend's .env exactly, or be
+// left empty ("") to match an unset/blank INGEST_API_KEY there too. Sent as
+// the x-api-key header on every forwarded reading so a random device on the
+// same WiFi network can't inject fake worker data. Leave both sides blank
+// while you're just getting things running.
+#define HEATSHIELD_INGEST_API_KEY ""
+
+#endif  // HEATSHIELD_WIFI_CONFIG_H

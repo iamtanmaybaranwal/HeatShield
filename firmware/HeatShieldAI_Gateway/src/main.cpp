@@ -9,6 +9,8 @@
 
 #include "lora_manager.h"
 #include "lora_packet.h"
+#include "wifi_manager.h"
+#include "http_forwarder.h"
 
 // Mirrors HEATSHIELD_CLASS_NAMES in ../HeatShieldAI/src/model_params.h --
 // the node sends predictedClass as an index into this same ordering, since
@@ -16,6 +18,8 @@
 static const char* const kClassNames[4] = {"SAFE", "WARNING", "DANGER", "CRITICAL"};
 
 static LoRaGatewayManager loraManager;
+static WiFiManager wifiManager;
+static HttpForwarder httpForwarder;
 
 // If no packet has arrived in this long, print a link-lost notice (once,
 // not on every loop iteration) so it's obvious on Serial that the node has
@@ -39,9 +43,19 @@ void setup() {
     } else {
         Serial.println(F("[OK] LoRa radio ready. Waiting for node telemetry..."));
     }
+
+    // ---- WiFi + backend forwarding (never fatal if missing/unreachable;
+    // LoRa reception keeps working regardless -- see wifi_manager.h) ----
+    wifiManager.begin();
 }
 
 void loop() {
+    // Non-blocking: returns immediately if already connected, otherwise
+    // kicks off a rate-limited reconnect attempt. Runs every iteration
+    // regardless of LoRa state so WiFi keeps trying to recover in the
+    // background even while waiting on the radio.
+    wifiManager.ensureConnected();
+
     // ---- Recover from a failed radio init without ever hard-crashing ----
     if (!loraManager.isReady()) {
         delay(2000);
@@ -96,6 +110,24 @@ void loop() {
             Serial.print(F("Heat Index        : ")); Serial.print(packet.heatIndexC, 2); Serial.println(F(" C"));
             Serial.print(F("Prediction        : ")); Serial.println(className);
             Serial.print(F("Confidence        : ")); Serial.print(packet.confidencePercent, 1); Serial.println(F(" %"));
+            if (packet.gpsFixValid) {
+                Serial.print(F("GPS               : ")); Serial.print(packet.latitude, 6);
+                Serial.print(F(", ")); Serial.print(packet.longitude, 6);
+                Serial.print(F(" (")); Serial.print(packet.satellites); Serial.println(F(" sats)"));
+            } else {
+                Serial.println(F("GPS               : -- (node has no fix yet)"));
+            }
+
+            // ---- Forward to the Node.js backend over WiFi (never blocks
+            // LoRa reception on failure -- see http_forwarder.h) ----
+            if (wifiManager.isConnected()) {
+                bool forwarded = httpForwarder.forward(packet, rssi, snr);
+                Serial.println(forwarded
+                    ? F("[HTTP] Forwarded to backend.")
+                    : F("[HTTP] Forward FAILED (backend unreachable/error) -- reading dropped, next one supersedes it."));
+            } else {
+                Serial.println(F("[HTTP] Skipped forward -- WiFi not connected."));
+            }
             break;
         }
     }

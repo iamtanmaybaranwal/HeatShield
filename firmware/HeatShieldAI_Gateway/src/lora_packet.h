@@ -23,6 +23,11 @@
 // payload.
 static const uint8_t HEATSHIELD_LORA_MAGIC = 0x48;  // ASCII 'H'
 
+// Length of the workerId field below, including the null terminator. Kept
+// short since it only needs to hold ids like "worker1" -- the gateway/
+// backend are the source of truth for any richer worker profile data.
+static const uint8_t HEATSHIELD_WORKER_ID_LEN = 16;
+
 struct __attribute__((packed)) HeatShieldLoRaPacket {
     uint8_t magic;             // always HEATSHIELD_LORA_MAGIC
     uint32_t sequenceNumber;   // increments every send; lets the gateway notice drops
@@ -34,6 +39,14 @@ struct __attribute__((packed)) HeatShieldLoRaPacket {
     uint8_t fingerPresent;     // 0 or 1 -- gateway should show "--" for HR/SpO2 when 0
     uint8_t predictedClass;    // index into HEATSHIELD_CLASS_NAMES: SAFE/WARNING/DANGER/CRITICAL
     float confidencePercent;
+    // ---- GPS (NEO-6M, appended -- see gps_manager.h on the node side) ----
+    float latitude;            // degrees; 0.0 if no fix has ever been acquired
+    float longitude;           // degrees; 0.0 if no fix has ever been acquired
+    uint8_t gpsFixValid;       // 0/1 -- gateway/backend should not plot (0,0) as a real point
+    uint8_t satellites;        // satellites used in the most recent fix; 0 if none
+    // ---- Worker identity, so a future multi-node gateway can tell workers
+    // apart; always null-terminated (see HeatShieldLoRaPacket sender code). ----
+    char workerId[HEATSHIELD_WORKER_ID_LEN];
 };
 
 #endif  // HEATSHIELD_LORA_PACKET_H

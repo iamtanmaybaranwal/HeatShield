@@ -1,0 +1,19 @@
+{
+  "name": "heatshieldai-dashboard",
+  "version": "1.0.0",
+  "description": "Node.js backend + web dashboard for HeatShieldAI: receives worker telemetry forwarded by the LoRa gateway, stores it in Firestore, and serves a live dashboard with per-worker maps and 30-day heat-strain history.",
+  "private": true,
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "seed": "node scripts/seedDummyWorkers.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "firebase-admin": "^12.7.0"
+  }
+}

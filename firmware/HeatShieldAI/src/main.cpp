@@ -8,6 +8,8 @@
 
 #include <Arduino.h>
 
+#include <string.h>
+
 #include "sensors.h"
 #include "display.h"
 #include "alerts.h"
@@ -16,12 +18,20 @@
 #include "model_params.h"
 #include "lora_manager.h"
 #include "lora_packet.h"
+#include "gps_manager.h"
+
+// Identifies this physical node's readings once they reach the gateway/
+// dashboard. Change this per device if more real nodes are ever deployed
+// alongside this one -- must stay under HEATSHIELD_WORKER_ID_LEN (16)
+// characters including the null terminator.
+static const char* const HEATSHIELD_WORKER_ID = "worker1";
 
 static SensorManager sensorManager;
 static DisplayManager displayManager;
 static AlertManager alertManager;
 static TinyMLInference inference;
 static LoRaManager loraManager;
+static GpsManager gpsManager;
 static uint32_t loraSequenceNumber = 0;
 
 // How long to actively poll the alert pattern + OLED page rotation after
@@ -92,6 +102,11 @@ void setup() {
                           "Continuing without gateway telemetry."));
     }
 
+    // ---- GPS (never fatal; a fix can take seconds to minutes to acquire) ----
+    gpsManager.begin();
+    Serial.println(F("[INFO] GPS UART started. Waiting for satellite fix "
+                      "(location will read 0,0 with gpsFixValid=0 until then)."));
+
     // ---- TinyML model ----
     bool modelOk = inference.begin();
     if (!modelOk) {
@@ -135,6 +150,11 @@ void loop() {
     // ---- Read sensors (SensorManager already substitutes last-known-good
     // values and flags *_valid on failure; it never returns NaN) ----
     SensorReadings readings = sensorManager.readAll();
+
+    // Drain whatever GPS NMEA data queued up in Serial1's buffer during the
+    // blocking MAX30102 read above (see gps_manager.cpp on why the buffer
+    // is oversized for exactly this gap).
+    gpsManager.update();
 
     if (!readings.dhtValid) {
         Serial.println(F("[WARN] DHT22 read invalid this cycle (disconnected/NaN?). "
@@ -199,6 +219,13 @@ void loop() {
         Serial.println(readings.fingerPresent ? F(" (finger detected)") : F(" (no finger / calibrate threshold)"));
     }
     Serial.print(F("Heat Index        : ")); Serial.print(rawFeatures[4], 2); Serial.println(F(" C"));
+    if (gpsManager.hasFix()) {
+        Serial.print(F("GPS               : ")); Serial.print(gpsManager.latitude(), 6);
+        Serial.print(F(", ")); Serial.print(gpsManager.longitude(), 6);
+        Serial.print(F(" (")); Serial.print(gpsManager.satellites()); Serial.println(F(" sats)"));
+    } else {
+        Serial.println(F("GPS               : -- (no fix yet)"));
+    }
 
     Serial.print(F("Normalized Inputs : ["));
     for (int i = 0; i < HEATSHIELD_NUM_FEATURES; i++) {
@@ -257,6 +284,12 @@ void loop() {
     loraPacket.fingerPresent = readings.fingerPresent ? 1 : 0;
     loraPacket.predictedClass = static_cast<uint8_t>(result.predictedClass);
     loraPacket.confidencePercent = confidencePercent;
+    loraPacket.latitude = gpsManager.latitude();
+    loraPacket.longitude = gpsManager.longitude();
+    loraPacket.gpsFixValid = gpsManager.hasFix() ? 1 : 0;
+    loraPacket.satellites = gpsManager.satellites();
+    strncpy(loraPacket.workerId, HEATSHIELD_WORKER_ID, HEATSHIELD_WORKER_ID_LEN - 1);
+    loraPacket.workerId[HEATSHIELD_WORKER_ID_LEN - 1] = '\0';
 
     if (loraManager.isReady()) {
         bool sent = loraManager.send(loraPacket);
@@ -277,6 +310,7 @@ void loop() {
     while (millis() - pollStart < kPollWindowMs) {
         alertManager.update();
         displayManager.update();
+        gpsManager.update();
         delay(10);
     }
 }
