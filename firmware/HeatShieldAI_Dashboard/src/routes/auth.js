@@ -64,6 +64,36 @@ router.get("/me", verifyAuth, (req, res) => {
   res.json({ user: req.user });
 });
 
+// PATCH /api/auth/me -- lets a signed-in user edit their own display name.
+// Deliberately does NOT allow changing phoneNumber or role here:
+// phoneNumber is the account's login identifier (baked into the synthetic
+// email -- see ../auth.js), and any device currently allocated to this
+// user is keyed off phoneNumber/uid (see routes/supervisor.js), so
+// changing it would silently orphan that allocation. Role changes go
+// through the supervisor-signup-code gate in /register, not here.
+router.patch("/me", verifyAuth, async (req, res) => {
+  const { name } = req.body || {};
+  if (typeof name !== "string" || !name.trim()) {
+    return res.status(400).json({ error: "name must be a non-empty string." });
+  }
+  const trimmed = name.trim().slice(0, 80);
+
+  await db.collection("users").doc(req.user.uid).update({ name: trimmed });
+
+  // Devices allocated to this user carry a denormalized copy of their name
+  // (allocatedToName, shown in the supervisor's device-management panel) --
+  // keep those in sync so a rename doesn't leave stale names scattered
+  // across devices.
+  const allocatedDevices = await db.collection("workers").where("allocatedToUid", "==", req.user.uid).get();
+  if (!allocatedDevices.empty) {
+    const batch = db.batch();
+    allocatedDevices.docs.forEach((doc) => batch.update(doc.ref, { allocatedToName: trimmed }));
+    await batch.commit();
+  }
+
+  res.json({ user: { ...req.user, name: trimmed } });
+});
+
 // Like verifyAuth, but deliberately does NOT require a users/{uid} profile
 // to already exist (that's exactly what /register is creating) -- it only
 // needs a valid Firebase ID token, and attaches the raw uid.

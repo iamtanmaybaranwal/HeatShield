@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Heatshield",
+    "slug": "HeatShieldAI_Mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logo.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0b1f3a",
+        "foregroundImage": "./assets/logo.png"
+      },
+      "softwareKeyboardLayoutMode": "resize"
+    },
+    "web": {
+      "favicon": "./assets/logo.png"
+    }
+  }
+}

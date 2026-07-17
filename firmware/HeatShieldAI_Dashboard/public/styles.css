@@ -86,8 +86,16 @@ body {
 
 .app-header__brand {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-header__logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  object-fit: contain;
+  flex: none;
 }
 
 .app-header__brand h1 {
@@ -178,6 +186,16 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   padding: 28px;
+  box-shadow: 0 12px 32px rgba(11, 11, 11, 0.06);
+}
+
+.login-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  object-fit: contain;
+  display: block;
+  margin: 0 0 14px;
 }
 
 .login-wrap h2 {

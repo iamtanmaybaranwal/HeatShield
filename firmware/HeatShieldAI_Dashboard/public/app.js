@@ -279,7 +279,8 @@ function renderLoginScreen(message) {
 
   root.innerHTML = `
     <div class="login-wrap">
-      <h2>HeatShieldAI</h2>
+      <img src="logo.png" alt="" class="login-logo" onerror="this.style.display='none'" />
+      <h2>Heatshield</h2>
       <p class="login-subtitle">${isSignup ? "Create an account" : "Sign in"} to continue</p>
 
       <div class="role-tabs">
@@ -704,7 +705,7 @@ function longTermRiskPanelHtml(risk) {
           <div class="condition-chip-row">
             ${HEAT_EXPOSURE_CONDITIONS.map((c) => `<span class="condition-chip">${escapeHtml(c)}</span>`).join("")}
           </div>
-          <p>HeatShieldAI is <strong>not diagnosing any of these.</strong> The on-device model only ever
+          <p>Heatshield is <strong>not diagnosing any of these.</strong> The on-device model only ever
           classifies the current reading (SAFE/WARNING/DANGER/CRITICAL). The four indicators above are a
           transparent, rule-based layer on top of that — identifying risk patterns, repeated heat exposure,
           and early warning trends from this device's history, before health visibly deteriorates. Reduced
