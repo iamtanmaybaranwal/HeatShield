@@ -110,11 +110,6 @@ router.get("/:id", async (req, res) => {
       name: workerData.name || workerId,
       site: workerData.site || "Unassigned",
       deviceType: workerData.deviceType || "real",
-      // True only for the hardware-failure backup demo worker (see
-      // scripts/resetDemoWorker.js) -- it has no genuine accumulated
-      // history, so the frontend skips the health-check/trend/recent-
-      // activity sections entirely rather than showing near-empty ones.
-      hideHistory: workerData.hideHistory || false,
       allocatedToPhone: workerData.allocatedToPhone || null,
       allocatedToName: workerData.allocatedToName || null,
       latest: workerData.latest

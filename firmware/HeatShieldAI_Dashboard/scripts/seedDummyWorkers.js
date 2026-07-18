@@ -1,15 +1,10 @@
 // seedDummyWorkers.js
 // --------------------
-// Populates 2 example workers (worker3, worker4) with 30 days of synthetic
-// hourly readings, so the dashboard has a "here's what a concerning month
-// looks like" showcase besides worker1 (the real device). NEVER touches
-// worker1 -- that id is reserved for the actual running system, per the
-// project requirement that worker1's data must be real, not simulated.
-//
-// worker2 is NOT part of this script -- it's the live hardware-failure
-// backup demo worker instead (see scripts/resetDemoWorker.js and
-// src/demoSimulator.js), which needs to look like a continuously-updating
-// real device, not a static 30-day snapshot.
+// Populates 3 example workers (worker2, worker3, worker4) with 30 days of
+// synthetic hourly readings, so the dashboard has something to show besides
+// worker1 (the real device). NEVER touches worker1 -- that id is reserved
+// for the actual running system, per the project requirement that worker1's
+// data must be real, not simulated.
 //
 // Run with: npm run seed
 // Re-running is safe by default (skips any worker that already has data);
@@ -17,8 +12,9 @@
 //
 // Each worker gets a different monthly heat-strain profile on purpose, so
 // the dashboard's 30-day chronic-exposure indicator (see ../src/heatStrain.js)
-// has something meaningful to differentiate between moderate/high risk
+// has something meaningful to differentiate between low/moderate/high risk
 // across workers, instead of every dummy worker looking identical:
+//   - worker2: mild month, mostly SAFE/WARNING -> low cumulative exposure
 //   - worker3: a rough ~8-day stretch mid-month with heavy sun exposure
 //     -> high cumulative exposure (demonstrates the "high" risk bucket)
 //   - worker4: moderate, uneven month -> moderate cumulative exposure
@@ -46,6 +42,20 @@ const PEAK_HOUR_INDEX = 5; // the 12:00 reading -- midday, hottest part of the s
 // within each reading still comes from the seeded RNG -- only the
 // day-to-day STRUCTURE (which days are bad) is fixed.
 const WORKER_PROFILES = [
+  {
+    workerId: "worker2",
+    name: "Ramesh Kumar",
+    site: "Site B - Warehouse Expansion",
+    baseLat: 28.6139,
+    baseLon: 77.209, // New Delhi (placeholder)
+    seed: 20260101,
+    // Mild month: only 2 DANGER-peak days all month -> "low" bucket.
+    dayPeakClass(dayIndex) {
+      if (dayIndex === 10 || dayIndex === 22) return 2;
+      if ([0, 6, 13, 20, 27].includes(dayIndex)) return 0; // a few easy/rest days
+      return 1;
+    },
+  },
   {
     workerId: "worker3",
     name: "Suresh Patel",

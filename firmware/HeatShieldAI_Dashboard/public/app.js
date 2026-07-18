@@ -606,7 +606,7 @@ function detailShellHtml(w, { allowBack }) {
       ${statTileRowHtml(latest)}
     </div>
 
-    <div class="panel-grid" style="${w.hideHistory ? "grid-template-columns: 1fr;" : ""}">
+    <div class="panel-grid">
       <div class="panel">
         <h3>Location</h3>
         <div id="map"></div>
@@ -615,10 +615,7 @@ function detailShellHtml(w, { allowBack }) {
         </div>
       </div>
 
-      ${
-        w.hideHistory
-          ? ""
-          : `<div class="panel">
+      <div class="panel">
         <h3>30-day overall risk</h3>
         <div class="risk-count">${bucketLabel(w.risk.bucket)}<span class="risk-count-unit"> over ${w.risk.totalDays} days</span></div>
         <div class="meter-track">
@@ -626,18 +623,14 @@ function detailShellHtml(w, { allowBack }) {
         </div>
         <div class="meter-scale"><span>0</span><span>3 (moderate)</span><span>7 (high)</span><span>30</span></div>
         <p class="risk-label">Worst of the 4 indicators below — see the full breakdown for specifics.</p>
-      </div>`
-      }
+      </div>
     </div>
 
-    ${w.hideHistory ? "" : longTermRiskPanelHtml(w.risk)}
+    ${longTermRiskPanelHtml(w.risk)}
 
     ${isSupervisor ? managementPanelHtml(w) : ""}
 
-    ${
-      w.hideHistory
-        ? ""
-        : `<div class="panel" style="margin-bottom:20px;">
+    <div class="panel" style="margin-bottom:20px;">
       <h3>
         <span>Trend (last ${w.history.length} days)</span>
         <span class="metric-tabs" id="metric-tabs">
@@ -663,8 +656,7 @@ function detailShellHtml(w, { allowBack }) {
           </tbody>
         </table>
       </div>
-    </div>`
-    }
+    </div>
   `;
 }
 

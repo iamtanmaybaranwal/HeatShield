@@ -2,15 +2,25 @@
 // -----------------
 // POST /api/ingest -- the gateway's forward target (see
 // ../../HeatShieldAI_Gateway/src/http_forwarder.cpp). Validates one
-// reading and hands it to ../ingestWriter.js, which does the actual
-// Firestore transaction (shared with src/demoSimulator.js).
+// reading, writes it to Firestore, and updates that worker's running daily
+// aggregate in the same transaction so the dashboard never has to scan raw
+// readings to build the 30-day view.
 
 const express = require("express");
-const { writeReading, isFiniteNumber } = require("../ingestWriter");
+const { db, admin } = require("../firebase");
+const {
+  dateKeyUTC,
+  emptyDailyStats,
+  foldReadingIntoDailyStats,
+} = require("../heatStrain");
 
 const router = express.Router();
 
 const WORKER_ID_PATTERN = /^[A-Za-z0-9_-]{1,32}$/;
+
+function isFiniteNumber(value) {
+  return typeof value === "number" && Number.isFinite(value);
+}
 
 function validatePayload(body) {
   const errors = [];
@@ -58,8 +68,63 @@ router.post("/", checkApiKey, async (req, res) => {
     return res.status(400).json({ error: "Invalid payload", details: errors });
   }
 
+  const body = req.body;
+  const workerId = body.workerId;
+  const now = new Date();
+  const dayKey = dateKeyUTC(now);
+
+  const workerRef = db.collection("workers").doc(workerId);
+  const readingRef = workerRef.collection("readings").doc();
+  const dailyStatsRef = workerRef.collection("dailyStats").doc(dayKey);
+
+  const reading = {
+    receivedAt: admin.firestore.Timestamp.fromDate(now),
+    sequenceNumber: isFiniteNumber(body.sequenceNumber) ? body.sequenceNumber : null,
+    temperatureC: body.temperatureC,
+    humidityPct: body.humidityPct,
+    heartRateBpm: body.heartRateBpm,
+    spo2Pct: body.spo2Pct,
+    heatIndexC: body.heatIndexC,
+    fingerPresent: body.fingerPresent,
+    predictedClass: body.predictedClass,
+    confidencePercent: body.confidencePercent,
+    latitude: body.latitude,
+    longitude: body.longitude,
+    gpsFixValid: body.gpsFixValid,
+    satellites: Number.isInteger(body.satellites) ? body.satellites : 0,
+    rssi: isFiniteNumber(body.rssi) ? body.rssi : null,
+    snr: isFiniteNumber(body.snr) ? body.snr : null,
+  };
+
   try {
-    await writeReading(req.body.workerId, req.body);
+    await db.runTransaction(async (tx) => {
+      const [workerSnap, dailyStatsSnap] = await Promise.all([
+        tx.get(workerRef),
+        tx.get(dailyStatsRef),
+      ]);
+
+      const stats = dailyStatsSnap.exists ? dailyStatsSnap.data() : emptyDailyStats(dayKey);
+      foldReadingIntoDailyStats(stats, reading);
+
+      // Single merge-write per document (rather than a separate create +
+      // update on workerRef) so this is correct regardless of whether the
+      // worker doc already existed -- an upsert, not a create-then-patch.
+      const workerUpdate = {
+        latest: reading,
+        lastSeenAt: admin.firestore.Timestamp.fromDate(now),
+      };
+      if (!workerSnap.exists) {
+        workerUpdate.name = workerId;
+        workerUpdate.site = "Unassigned";
+        workerUpdate.deviceType = "real";
+        workerUpdate.createdAt = admin.firestore.Timestamp.fromDate(now);
+      }
+
+      tx.set(readingRef, reading);
+      tx.set(dailyStatsRef, stats);
+      tx.set(workerRef, workerUpdate, { merge: true });
+    });
+
     res.status(201).json({ ok: true });
   } catch (err) {
     console.error("[ingest] Firestore write failed:", err);

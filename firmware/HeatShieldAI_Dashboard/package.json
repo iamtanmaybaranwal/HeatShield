@@ -8,8 +8,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "seed": "node scripts/seedDummyWorkers.js",
-    "reset-demo-worker": "node scripts/resetDemoWorker.js"
+    "seed": "node scripts/seedDummyWorkers.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
