@@ -15,12 +15,7 @@
         "foregroundImage": "./assets/icon-square.png"
       },
       "softwareKeyboardLayoutMode": "resize",
-      "package": "com.iamtanmaybaranwal.HeatShieldAI_Mobile",
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyCa_-4DmwDgZh5jSSmeWcUEmtYH78zaEPc"
-        }
-      }
+      "package": "com.iamtanmaybaranwal.HeatShieldAI_Mobile"
     },
     "web": {
       "favicon": "./assets/logo.png"

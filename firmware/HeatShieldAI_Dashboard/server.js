@@ -11,6 +11,7 @@ const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const { verifyAuth, requireSupervisor } = require("./src/auth");
+const { startDemoSimulator } = require("./src/demoSimulator");
 
 const app = express();
 
@@ -59,4 +60,5 @@ app.listen(PORT, () => {
   console.log(`HeatShieldAI Dashboard backend listening on http://0.0.0.0:${PORT}`);
   console.log(`  - Dashboard:      http://localhost:${PORT}`);
   console.log(`  - Ingest endpoint: http://localhost:${PORT}/api/ingest (POST)`);
+  startDemoSimulator();
 });

@@ -8,64 +8,38 @@ function fmt(value, digits = 1) {
   return Number(value).toFixed(digits);
 }
 
-// A wide 10-column table (as on the web dashboard) doesn't fit a phone
-// screen, so recent readings render as a compact card row instead --
-// same fields, mobile-appropriate layout.
-export default function ReadingRow({ reading }) {
-  const time = reading.receivedAt ? new Date(reading.receivedAt).toLocaleString() : "—";
-  const gps = reading.gpsFixValid ? `${fmt(reading.latitude, 4)}, ${fmt(reading.longitude, 4)}` : "No GPS fix";
-  const link =
-    reading.rssi !== null && reading.rssi !== undefined ? `${reading.rssi} dBm / ${fmt(reading.snr, 1)} dB` : "—";
+function timeOnly(iso) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
 
+// One past reading, in the same plain-language spirit as the vitals cards
+// above -- a time, a status, and the key numbers, nothing that reads like
+// raw telemetry (no coordinates, no radio link stats).
+export default function ReadingRow({ reading }) {
   return (
     <View style={styles.row}>
-      <View style={styles.topLine}>
-        <Text style={styles.time}>{time}</Text>
-        <StatusBadge predictedClass={reading.predictedClass} />
+      <Text style={styles.time}>{timeOnly(reading.receivedAt)}</Text>
+      <View style={styles.middle}>
+        <Text style={styles.summary}>
+          {fmt(reading.heatIndexC)}°C feels like · {reading.fingerPresent ? `${fmt(reading.heartRateBpm, 0)} BPM` : "no HR reading"}
+        </Text>
       </View>
-      <View style={styles.grid}>
-        <Text style={styles.cell}>Temp {fmt(reading.temperatureC)}°C</Text>
-        <Text style={styles.cell}>Humidity {fmt(reading.humidityPct)}%</Text>
-        <Text style={styles.cell}>HR {reading.fingerPresent ? fmt(reading.heartRateBpm, 0) : "—"}</Text>
-        <Text style={styles.cell}>SpO2 {reading.fingerPresent ? fmt(reading.spo2Pct, 0) + "%" : "—"}</Text>
-        <Text style={styles.cell}>Heat Index {fmt(reading.heatIndexC)}°C</Text>
-        <Text style={styles.cell}>Confidence {fmt(reading.confidencePercent, 0)}%</Text>
-      </View>
-      <Text style={styles.meta}>{gps} · {link}</Text>
+      <StatusBadge predictedClass={reading.predictedClass} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   row: {
-    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 11,
     borderBottomWidth: 1,
     borderBottomColor: colors.gridline,
   },
-  topLine: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  time: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontVariant: ["tabular-nums"],
-  },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 4,
-  },
-  cell: {
-    fontSize: 12,
-    color: colors.textPrimary,
-    fontVariant: ["tabular-nums"],
-  },
-  meta: {
-    fontSize: 10.5,
-    color: colors.textMuted,
-  },
+  time: { fontSize: 12, color: colors.textMuted, width: 56, fontVariant: ["tabular-nums"] },
+  middle: { flex: 1 },
+  summary: { fontSize: 12.5, color: colors.textPrimary, fontWeight: "500" },
 });

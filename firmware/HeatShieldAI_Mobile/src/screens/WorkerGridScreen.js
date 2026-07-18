@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import { apiRequest } from "../api";
 import StatusBadge from "../components/StatusBadge";
 import { colors } from "../theme";
@@ -8,6 +9,15 @@ import { colors } from "../theme";
 function fmt(value, digits = 1) {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
   return Number(value).toFixed(digits);
+}
+
+function initials(name) {
+  return (name || "?")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join("");
 }
 
 function relativeTime(isoString) {
@@ -79,48 +89,55 @@ export default function WorkerGridScreen({ navigation }) {
       keyExtractor={(w) => w.workerId}
       contentContainerStyle={styles.list}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />}
+      ListHeaderComponent={<Text style={styles.listHeader}>{workers.length} worker{workers.length === 1 ? "" : "s"}</Text>}
       renderItem={({ item: w }) => {
         const latest = w.latest;
         return (
           <TouchableOpacity
             style={styles.card}
+            activeOpacity={0.7}
             onPress={() => navigation.navigate("WorkerDetail", { workerId: w.workerId })}
           >
-            <View style={styles.cardTop}>
-              <View style={styles.flexShrink}>
-                <Text style={styles.cardName}>{w.name}</Text>
-                <Text style={styles.cardSite}>{w.site}</Text>
-              </View>
-              <StatusBadge predictedClass={latest ? latest.predictedClass : null} />
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{initials(w.name)}</Text>
             </View>
-            <View style={styles.statsRow}>
-              <View style={styles.miniStat}>
-                <Text style={styles.miniStatLabel}>Heat Index</Text>
-                <Text style={styles.miniStatValue}>{latest ? fmt(latest.heatIndexC) + "°C" : "—"}</Text>
+            <View style={styles.cardBody}>
+              <View style={styles.cardTop}>
+                <View style={styles.flexShrink}>
+                  <Text style={styles.cardName} numberOfLines={1}>{w.name}</Text>
+                  <Text style={styles.cardSite} numberOfLines={1}>{w.site}</Text>
+                </View>
+                <StatusBadge predictedClass={latest ? latest.predictedClass : null} />
               </View>
-              <View style={styles.miniStat}>
-                <Text style={styles.miniStatLabel}>Heart Rate</Text>
-                <Text style={styles.miniStatValue}>
-                  {latest && latest.fingerPresent ? fmt(latest.heartRateBpm, 0) : "—"}
-                </Text>
+              <View style={styles.statsRow}>
+                <View style={styles.miniStat}>
+                  <Ionicons name="flame-outline" size={13} color={colors.textMuted} />
+                  <Text style={styles.miniStatValue}>{latest ? fmt(latest.heatIndexC) + "°C" : "—"}</Text>
+                </View>
+                <View style={styles.miniStat}>
+                  <Ionicons name="heart-outline" size={13} color={colors.textMuted} />
+                  <Text style={styles.miniStatValue}>
+                    {latest && latest.fingerPresent ? fmt(latest.heartRateBpm, 0) + " BPM" : "—"}
+                  </Text>
+                </View>
+                <View style={styles.miniStat}>
+                  <Ionicons name="pulse-outline" size={13} color={colors.textMuted} />
+                  <Text style={styles.miniStatValue}>
+                    {latest && latest.fingerPresent ? fmt(latest.spo2Pct, 0) + "%" : "—"}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.miniStat}>
-                <Text style={styles.miniStatLabel}>SpO2</Text>
-                <Text style={styles.miniStatValue}>
-                  {latest && latest.fingerPresent ? fmt(latest.spo2Pct, 0) + "%" : "—"}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.cardFooter}>
               <Text style={styles.footerText} numberOfLines={1}>
                 {w.allocatedToName || w.allocatedToPhone
-                  ? `Allocated: ${w.allocatedToName || w.allocatedToPhone}`
+                  ? `Allocated · ${w.allocatedToName || w.allocatedToPhone}`
                   : w.deviceType === "real"
                     ? "Live device"
                     : "Example data"}
+                {"  ·  "}
+                {w.waiting ? "Waiting…" : relativeTime(w.lastSeenAt)}
               </Text>
-              <Text style={styles.footerText}>{w.waiting ? "Waiting…" : relativeTime(w.lastSeenAt)}</Text>
             </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </TouchableOpacity>
         );
       }}
@@ -137,28 +154,44 @@ export default function WorkerGridScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  list: { padding: 16, gap: 12 },
+  list: { padding: 16, gap: 10 },
+  listHeader: { fontSize: 12, fontWeight: "700", color: colors.textMuted, textTransform: "uppercase", marginBottom: 4 },
   centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   mutedText: { color: colors.textMuted, fontSize: 13, textAlign: "center" },
   errorTitle: { fontWeight: "700", fontSize: 15, color: colors.textPrimary, marginBottom: 6 },
   errorBody: { color: colors.textMuted, fontSize: 12.5, textAlign: "center" },
   card: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 10,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
     gap: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
   },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.navy,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: { color: "#fff", fontWeight: "800", fontSize: 15 },
+  cardBody: { flex: 1, gap: 6 },
   cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 8 },
   flexShrink: { flexShrink: 1 },
-  cardName: { fontSize: 16, fontWeight: "700", color: colors.textPrimary },
-  cardSite: { fontSize: 12.5, color: colors.textMuted, marginTop: 2 },
-  statsRow: { flexDirection: "row", justifyContent: "space-between" },
-  miniStat: { gap: 2 },
-  miniStatLabel: { fontSize: 10, color: colors.textMuted, textTransform: "uppercase" },
-  miniStatValue: { fontSize: 14, fontWeight: "600", color: colors.textPrimary },
-  cardFooter: { flexDirection: "row", justifyContent: "space-between" },
-  footerText: { fontSize: 11, color: colors.textMuted, flexShrink: 1 },
+  cardName: { fontSize: 15, fontWeight: "700", color: colors.textPrimary },
+  cardSite: { fontSize: 12, color: colors.textMuted, marginTop: 1 },
+  statsRow: { flexDirection: "row", gap: 14 },
+  miniStat: { flexDirection: "row", alignItems: "center", gap: 4 },
+  miniStatValue: { fontSize: 12, fontWeight: "600", color: colors.textPrimary },
+  footerText: { fontSize: 11, color: colors.textMuted },
 });
